@@ -22,7 +22,7 @@ class Signal(QObject):
     plotAddedSignal = pyqtSignal(tuple)
     plotVisibilityChangedSignal = pyqtSignal(tuple)
     plotColorChangedSignal = pyqtSignal(tuple)
-    plotDeletedSignal = pyqtSignal(tuple)
+    plotDeletedSignal = pyqtSignal(int)
 
 class MainWindow(QMainWindow):
     signals = Signal()
@@ -69,6 +69,8 @@ class MainWindow(QMainWindow):
 
         MainWindow.signals.plotAddedSignal.connect(self.plotAdded)
 
+        MainWindow.signals.plotDeletedSignal.connect(self.plotDeleted)
+
         self.plotSettingsLayout.addWidget(self.lineEdit, 0, 1, 1, 8)
         self.plotSettingsLayout.addWidget(self.yLabel, 0, 0, 1, 1)
         self.plotSettingsLayout.addWidget(self.plotColorButton, 0, 9, 1, 1)
@@ -93,6 +95,15 @@ class MainWindow(QMainWindow):
         self.redrawPlotList()
 
     def redrawPlotList(self):
+        for i in reversed(range(self.plotListLayout.rowCount()-1)):
+            widgetToRemove = self.plotListLayout.itemAtPosition(i, 0).widget()
+            # remove it from the layout list
+            self.plotListLayout.removeWidget(widgetToRemove)
+            # remove it from the gui
+            widgetToRemove.setParent(None)
+
+
+
         for i in range(len(self.plotsBill)):
             self.plotListLayout.addWidget(self.plotsBill[i], i, 0, 1, 1)
 
@@ -108,11 +119,19 @@ class MainWindow(QMainWindow):
     def clearLineEdit(self):
         self.lineEdit.clear()
 
+    def plotDeleted(self, index):
+        self.plotsBill.pop(index-1)
+        for i in range(len(self.plotsBill)):
+            self.plotsBill[i] = PlotListContainer(str(i+1), self.plotsBill[i].name, self.plotsBill[i].color)
+        self.redrawPlotList()
+
 class PlotListContainer(QWidget):
     def __init__(self, number, name, color):
         super().__init__()
 
         self.plotNumber = int(number)
+        self.name = name
+        self.color = color
 
         self.numberLabel = QLabel()
         self.numberLabel.setText(number+").")
@@ -130,10 +149,9 @@ class PlotListContainer(QWidget):
         self.setButtonColor(color)
         self.colorButton.clicked.connect(self.colorChoiceDialog)
 
-
-        # self.deletePlotButton = QPushButton()
-        # self.extraInformation.setIcon(QIcon("PlotColorChoiceButton"))
-        # self.deletePlotButton.clicked().connect(self.deleteButtonClicked)
+        self.deletePlotButton = QPushButton()
+        self.deletePlotButton.setIcon(QIcon("deleteButton.png"))
+        self.deletePlotButton.clicked.connect(self.deleteButtonClicked)
 
         self.layout = QGridLayout()
         self.setLayout(self.layout)
@@ -141,7 +159,7 @@ class PlotListContainer(QWidget):
         self.layout.addWidget(self.plotName, 0, 2, 1, 6)
         self.layout.addWidget(self.ifVisibleButton, 0, 1, 1, 1)
         self.layout.addWidget(self.colorButton, 0, 8, 1, 1)
-        # self.layout.addWidget(self.deletePlotButton, 0, 9, 1, 1)
+        self.layout.addWidget(self.deletePlotButton, 0, 9, 1, 1)
 
     def ifVisibleButtonClicked(self, isChecked):
         MainWindow.signals.plotVisibilityChangedSignal.emit((self.plotNumber, isChecked))
@@ -160,7 +178,8 @@ class PlotListContainer(QWidget):
             MainWindow.signals.plotColorChangedSignal.emit((self.plotNumber, color.name()))
             self.setButtonColor(color.name())
 
-
+    def deleteButtonClicked(self):
+        MainWindow.signals.plotDeletedSignal.emit(self.plotNumber)
 
 class PlotColorChoiceButton(QPushButton):
     def __init__(self, color = '#000000'):
@@ -271,6 +290,8 @@ class PlotCanvas(FigureCanvas):
 
         MainWindow.signals.plotVisibilityChangedSignal.connect(self.changePlotsVisibility)
         MainWindow.signals.plotColorChangedSignal.connect(self.changePlorColor)
+        MainWindow.signals.plotDeletedSignal.connect(self.deletePlot)
+
         self.drawAxes()
 
     def drawAxes(self):
@@ -387,6 +408,10 @@ class PlotCanvas(FigureCanvas):
 
     def changePlorColor(self, args):
         self.axesPlots[args[0] - 1][1] = args[1]
+        self.drawAxes()
+
+    def deletePlot(self, index):
+        self.axesPlots.pop(index-1)
         self.drawAxes()
 
 mainWindow = MainWindow()

@@ -17,9 +17,18 @@ PROGRAMME_ICON = QIcon("ProrgammeLogo.png")
 TEXT_FONT = QFont("Times New Roman", 16)
 MAX_PLOTS = 10
 
+class AxesEquation:
+    def __init__(self, formula=None, color="#000000"):
+        self.formula = formula
+        self.color = color
+        self.isVisible = True
+
+    def changeColor(self, color):
+        self.color = color
+
 class Signal(QObject):
     cleanLineEditSignal = pyqtSignal()
-    plotAddedSignal = pyqtSignal(tuple)
+    plotAddedSignal = pyqtSignal(AxesEquation)
     plotVisibilityChangedSignal = pyqtSignal(tuple)
     plotColorChangedSignal = pyqtSignal(tuple)
     plotDeletedSignal = pyqtSignal(int)
@@ -89,7 +98,7 @@ class MainWindow(QMainWindow):
         self.show()
 
     def plotAdded(self, plot):
-        newPlot = PlotListContainer(str(len(self.plotsBill)+1), 'y = ' + plot[0], plot[1])
+        newPlot = PlotListContainer(str(len(self.plotsBill)+1), 'y = ' + plot.formula, plot.color)
 
         self.plotsBill.append(newPlot)
         self.redrawPlotList()
@@ -107,7 +116,7 @@ class MainWindow(QMainWindow):
         for i in range(len(self.plotsBill)):
             self.plotListLayout.addWidget(self.plotsBill[i], i, 0, 1, 1)
 
-        for i in range(len(self.plotsBill), MAX_PLOTS):
+        for i in range(len(self.plotsBill), MAX_PLOTS+1):
             self.plotListLayout.addWidget(QLabel(''), i, 0, 1, 1)
 
     def buildButtonClicked(self):
@@ -309,11 +318,11 @@ class PlotCanvas(FigureCanvas):
         self.axes.axis([-100, 100, -100, 100])
 
         for i in range(len(self.axesPlots)):
-            if self.axesPlots[i][2]:
+            if self.axesPlots[i].isVisible:
                 xArgs = np.arange(-120., 120., 0.2)
-                yArgs = [(eval(self.axesPlots[i][0].replace('x', str(k)))) for k in xArgs]
+                yArgs = [(eval(self.axesPlots[i].formula.replace('x', str(k)))) for k in xArgs]
 
-                plotColor = self.axesPlots[i][1]
+                plotColor = self.axesPlots[i].color
 
                 self.axes.plot(xArgs, yArgs, 'k-', color = plotColor)
         self.draw()
@@ -363,7 +372,7 @@ class PlotCanvas(FigureCanvas):
             return()
 
         for i in self.axesPlots:
-            if i[0] == editedLine:
+            if i.formula == editedLine:
                 errorMessage.setWindowTitle("Ошибка")
                 errorMessage.showMessage("Ошибка: Данный график уже существует.")
                 MainWindow.signals.cleanLineEditSignal.emit()
@@ -388,26 +397,27 @@ class PlotCanvas(FigureCanvas):
             MainWindow.signals.cleanLineEditSignal.emit()
             return()
 
-        if len(self.axesPlots) > MAX_PLOTS:
+        if len(self.axesPlots) >= MAX_PLOTS:
             errorMessage.setWindowTitle("Ошибка")
             errorMessage.showMessage("Ошибка: Превышено максимальное кол-во графиков.")
             MainWindow.signals.cleanLineEditSignal.emit()
             return()
 
-        MainWindow.signals.plotAddedSignal.emit((text, color, True))
+        axesEquation = AxesEquation(editedLine, color)
+        MainWindow.signals.plotAddedSignal.emit(axesEquation)
 
-        self.axesPlots.append([editedLine, color, True])
+        self.axesPlots.append(axesEquation)
 
         MainWindow.signals.cleanLineEditSignal.emit()
 
         self.drawAxes()
 
     def changePlotsVisibility(self, args):
-        self.axesPlots[args[0]-1][2] = args[1]
+        self.axesPlots[args[0]-1].isVisible = args[1]
         self.drawAxes()
 
     def changePlorColor(self, args):
-        self.axesPlots[args[0] - 1][1] = args[1]
+        self.axesPlots[args[0] - 1].changeColor(args[1])
         self.drawAxes()
 
     def deletePlot(self, index):

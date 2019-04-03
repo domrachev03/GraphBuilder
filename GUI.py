@@ -1,6 +1,10 @@
 import sys
 
+import decimal as dc
+
 import numpy as np
+import sympy as sp
+from math import *
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -8,23 +12,177 @@ from PyQt5.QtGui import *
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+
 
 app = QApplication(sys.argv)
 
 PROGRAMME_NAME = "Graph builder"
 PROGRAMME_ICON = QIcon("ProrgammeLogo.png")
+PROGRAMME_ICON_ADRESS = "ProrgammeLogo.png"
 TEXT_FONT = QFont("Times New Roman", 16)
 MAX_PLOTS = 10
+PROGRAMME_SLOGAN = "Тебе не понадобится глазомер!"
+PROGRAMME_DESCRIBTION = '''  
+Графики занимают определенное место место в нашей жизни.
+Порой человек этого не замечает, но если вдуматься, то
+в большинстве отраслей, графики являются одной из 
+составляющей огромного проекта.
+ 
+    Моя программа сможет быстро и точно построить график
+любой сложности, что облегчает работу некоторым 
+сотрудникам и сокращает время работы. Также данную 
+программуможно использовать  студентам и школьникам
+в качестве проверки некоторых заданий из курса математики.
+'''
+STARTWINDOW_BACKGROUND_COLOR = "#00bfff"
+CREATOR_INFO = "Создано Домрачевым Иваном, 10 класс"
+# PROGRAMME_COLOR = #6A5ACD
+SCALE_MAX = 10000
+SCALE_MIN = 0.01
+MAX_PLOT_SYMBOLS = 25
+
+class StartWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.setMaximumSize(640, 480)
+        self.setMinimumSize(640, 480)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+
+        cp = QDesktopWidget().availableGeometry().center()
+        self.frameGeometry().moveCenter(cp)
+
+        self.setWindowFlag(Qt.FramelessWindowHint)
+        self.setStyleSheet("background-color:"+STARTWINDOW_BACKGROUND_COLOR)
+
+        self.startButton = QPushButton("Начать работу", self)
+        self.aboutProgrammeButton = QPushButton("О программе", self)
+        self.closeButton = QPushButton("Выход", self)
+        self.programmeNameLabel = QLabel(PROGRAMME_NAME, self)
+        self.programmeSloganLabel = QLabel(PROGRAMME_SLOGAN, self)
+
+        self.startButton.setFont(QFont("Courier New", 10))
+        self.aboutProgrammeButton.setFont(QFont("Courier New", 10))
+        self.closeButton.setFont(QFont("Courier New", 10))
+        self.programmeNameLabel.setFont(QFont("Comic Sans MS", 28))
+        self.programmeSloganLabel.setFont(QFont("Courier New", 14))
+
+        self.startButton.setStyleSheet("background-color:#ffffff")
+        self.aboutProgrammeButton.setStyleSheet("background-color:#ffffff")
+        self.closeButton.setStyleSheet("background-color:#ffffff")
+        # self.programmeNameLabel.setStyleSheet("")
+        # self.programmeSloganLabel.setStyleSheet("")
+
+        self.startButton.clicked.connect(self.startButtonClicked)
+        self.aboutProgrammeButton.clicked.connect(self.aboutProgrammeButtonClicked)
+        self.closeButton.clicked.connect(QCoreApplication.instance().quit)
+
+        self.startButton.setGeometry(self.width()*0.4, self.height()*0.65, self.width()*0.2, self.height()*0.05)
+        self.aboutProgrammeButton.setGeometry(self.width()*0.4, self.height()*0.75, self.width()*0.2, self.height()*0.05)
+        self.closeButton.setGeometry(self.width()*0.4, self.height()*0.85, self.width()*0.2, self.height()*0.05) #???????
+        self.programmeNameLabel.setGeometry(self.width()*0.32, self.height()*0.05, self.width()*0.8, self.height()*0.2)
+        self.programmeSloganLabel.setGeometry(self.width()*0.25, self.height()*0.2, self.width()*0.8, self.height()*0.15)
+
+        self.show()
+
+    def startButtonClicked(self):
+        mainWindow.show()
+        aboutProgrammeWindow.hide()
+        self.close()
+
+    def aboutProgrammeButtonClicked(self):
+        aboutProgrammeWindow.show()
+
+class AboutProgrammeWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.setMaximumSize(640, 480)
+        self.setMinimumSize(640, 480)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+
+        cp = QDesktopWidget().availableGeometry().center()
+        self.frameGeometry().moveCenter(cp)
+
+        self.setWindowFlag(Qt.FramelessWindowHint)
+
+        self.setStyleSheet("background-color:#0bda51")
+
+        self.infoTitle = QLabel(PROGRAMME_NAME, self)
+        self.infoSubtitle = QLabel(PROGRAMME_SLOGAN, self)
+        self.infoText = QLabel(PROGRAMME_DESCRIBTION, self)
+        self.infoCreator = QLabel(CREATOR_INFO, self)
+        self.closeButton = QPushButton("Выход", self)
+
+        self.closeButton.setStyleSheet("background-color:#ffffff")
+
+        self.logoImage = QPixmap(PROGRAMME_ICON_ADRESS)
+        self.programmeLogo = QLabel(self)
+        self.programmeLogo.setStyleSheet("background-color:#ffffff")
+        self.programmeLogo.setPixmap(self.logoImage)
+        self.programmeLogo.resize(self.logoImage.width(), self.logoImage.height())
+
+
+        self.infoTitle.setFont(QFont("Comic Sans MC", 24))
+        self.infoSubtitle.setFont(QFont("Courier New", 16))
+        self.infoText.setFont(QFont("Courier New", 10))
+        self.infoCreator.setFont(QFont("Courier New", 10))
+        self.closeButton.setFont(QFont("Courier New", 10))
+
+        self.infoCreator.setStyleSheet("color:#000080")
+
+        self.closeButton.clicked.connect(self.hide)
+
+        self.infoTitle.move(self.width()*0.05, self.height()*0.05)
+        self.programmeLogo.move(self.width()*0.75, self.height()*0.05)
+        self.infoSubtitle.move(self.width()*0.05, self.height()*0.2)
+        self.infoText.move(self.width()*0.05, self.height()*0.4)
+        self.infoCreator.move(self.width()*0.005, self.height()*0.965)
+        self.closeButton.setGeometry(self.width()*0.792, self.height()*0.937, self.width()*0.2, self.height()*0.05)
 
 class AxesEquation:
-    def __init__(self, formula=None, color="#000000"):
-        self.formula = formula
+    def __init__(self, formula=None, equation = None, color="#000000"):
+        self.equation = equation
+
+        self.formula = sp.simplify(formula[formula.find('=')+1:])
+        self.stringFormula = equation
+
         self.color = color
         self.isVisible = True
 
+        self.xZeroPoints = sp.solveset(sp.Eq(self.formula, 0), x)
+        self.yZeroPoints =  self.formula.subs(x, 0)
+
+        self.points = list()
+
+        self.derivatives = [sp.diff(self.formula), ]
+
     def changeColor(self, color):
         self.color = color
+
+    def crossCut(self, axes1, axes2):
+        xArgs = sp.solveset(sp.Eq(axes1.formula, axes2.formula), x)
+        yArgs = {axes1.formula.subs(x, i) for i in xArgs}
+
+    def addingPoints(self, xCoord = None, yCoord = None):
+        if xCoord is None:
+            yCoord = self.formula.subs(x, xCoord)
+            self.points.insert({xCoord, yCoord})
+        else:
+            xCoord = sp.solveset(self.formula-yCoord)
+
+            for i in xCoord:
+                self.points.insert({i, yCoord})
+
+    def addNewOrderDerivate(self):
+        self.derivatives.append(sp.diff(self.derivatives[-1]))
+
+    def countingRangeSpace(self):
+        pass
+
+    def funcExtremum(self):
+        pass
 
 class Signal(QObject):
     cleanLineEditSignal = pyqtSignal()
@@ -32,6 +190,7 @@ class Signal(QObject):
     plotVisibilityChangedSignal = pyqtSignal(tuple)
     plotColorChangedSignal = pyqtSignal(tuple)
     plotDeletedSignal = pyqtSignal(int)
+    scaleChanged = pyqtSignal(bool)
 
 class MainWindow(QMainWindow):
     signals = Signal()
@@ -39,9 +198,13 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # self.setGeometry(app.desktop().availableGeometry())
         self.setWindowIcon(PROGRAMME_ICON)
         self.setWindowTitle(PROGRAMME_NAME)
+
+        self.setMinimumSize(1024, 720)
+
+        cp = QDesktopWidget().availableGeometry().center()
+        self.frameGeometry().moveCenter(cp)
 
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
@@ -56,6 +219,7 @@ class MainWindow(QMainWindow):
         MainWindow.signals.cleanLineEditSignal.connect(self.clearLineEdit)
 
         self.yLabel = QLabel("y =")
+        self.yLabel.setStyleSheet("color: white")
         self.yLabel.setAlignment(Qt.AlignRight)
         self.yLabel.setFont(TEXT_FONT)
 
@@ -76,6 +240,32 @@ class MainWindow(QMainWindow):
         self.plotList.setLayout(self.plotListLayout)
         self.plotsBill = list()
 
+        self.minusScaleButton = QPushButton()
+        self.minusScaleButton.setMinimumSize(22, 22)
+        self.minusScaleButton.setMaximumSize(22, 22)
+        self.minusScaleButton.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.minusScaleButton.setIcon(QIcon("minus.png"))
+        self.minusScaleButton.setFont(TEXT_FONT)
+
+        self.minusScaleButton.clicked.connect(self.minusScaleButtonClicked)
+        self.minusScaleButton.setAutoRepeat(True)
+        self.minusScaleButton.setAutoRepeatDelay(200)
+
+        self.scaleLabel = QLabel("Масштаб")
+        self.scaleLabel.setFont(TEXT_FONT)
+        self.scaleLabel.setAlignment(Qt.AlignCenter)
+
+        self.plusScaleButton = QPushButton()
+        self.plusScaleButton.setMinimumSize(22, 22)
+        self.plusScaleButton.setMaximumSize(22, 22)
+        self.plusScaleButton.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.plusScaleButton.setIcon(QIcon("plus.png"))
+        self.plusScaleButton.setFont(TEXT_FONT)
+
+        self.plusScaleButton.clicked.connect(self.plusScaleButtonClicked)
+        self.plusScaleButton.setAutoRepeat(True)
+        self.plusScaleButton.setAutoRepeatDelay(200)
+
         MainWindow.signals.plotAddedSignal.connect(self.plotAdded)
 
         MainWindow.signals.plotDeletedSignal.connect(self.plotDeleted)
@@ -85,20 +275,46 @@ class MainWindow(QMainWindow):
         self.plotSettingsLayout.addWidget(self.plotColorButton, 0, 9, 1, 1)
         self.plotSettingsLayout.addWidget(self.buildButton, 1, 0, 1, 5)
         self.plotSettingsLayout.addWidget(self.discardButton, 1, 5, 1, 5)
+
         self.plotSettingsLayout.addWidget(self.plotList, 2, 0, 9, 10)
 
+        self.plotSettingsLayout.addWidget(self. minusScaleButton, 10, 2, 1, 1)
+        self.plotSettingsLayout.addWidget(self. scaleLabel, 10, 3, 1, 4)
+        self.plotSettingsLayout.addWidget(self. plusScaleButton, 10, 7, 1, 1)
+
         self.layout = QGridLayout(self.centralWidget)
-        self.layout.addWidget(self.plotCanvas, 0, 4, -1, 2)
-        self.layout.addWidget(self.plotSettings, 0, 0, -1, 1)
+        self.layout.addWidget(self.plotSettings, 0, 0, -1, 6)
+        self.layout.addWidget(self.plotCanvas, 0, 6, -1, 14)
         self.setLayout(self.layout)
+
+        # self.lineEdit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.menuBar = MenuBar()
         self.setMenuBar(self.menuBar)
 
-        self.show()
+        self.setStyleSheet('''
+            QMainWindow{background-color:#3c3f41}
+
+            QMenuBar{border-bottom-style: ridge; border-bottom-width: 1px;border-bottom-color:#1a1a1a; color:white}
+            QMenuBar::item{background-color:#3c3f41}
+            QMenuBar::item:hovered{background-color:#3c3f41}
+            QMenuBar::item:pressed{background-color:#496DAB}
+            QMenuBar:pressed{background-color:#3c3f41}
+
+            QPushButton{background-color: white; color: black}
+            QPushButton:hover{background-color:#aaaaaa}
+            QPushButton:pressed{background-color:#aaaaaa}
+            
+            QLineEdit{background-color:white; border-style: solid; border-width:3px; border-color:white; border-radius: 9px;}"
+            
+            QPushButton#minusScaleButton, QPushButton#plusScaleButton{border-style: solid; border-width: 1px; border-radius: 11px; background-color: #3c3f41;border-color: #3c3f41}
+        ''')
+        self.minusScaleButton.setStyleSheet("border-style: solid; border-width: 1px; border-radius: 11px; background-color: #3c3f41;border-color: #3c3f41")
+        self.plusScaleButton.setStyleSheet("border-style: solid; border-width: 1px; border-radius: 11px; background-color: #3c3f41;border-color: #3c3f41")
+        self.scaleLabel.setStyleSheet("color: white; text-decoration: underline")
 
     def plotAdded(self, plot):
-        newPlot = PlotListContainer(str(len(self.plotsBill)+1), 'y = ' + plot.formula, plot.color)
+        newPlot = PlotListContainer(str(len(self.plotsBill)+1), plot.equation, plot.color)
 
         self.plotsBill.append(newPlot)
         self.redrawPlotList()
@@ -120,7 +336,10 @@ class MainWindow(QMainWindow):
             self.plotListLayout.addWidget(QLabel(''), i, 0, 1, 1)
 
     def buildButtonClicked(self):
-        self.plotCanvas.addPlot(self.lineEdit.text(), self.plotColorButton.currentColor)
+        if 0 < len(self.lineEdit.text()) <= MAX_PLOT_SYMBOLS:
+            self.plotCanvas.addPlot("y="+self.lineEdit.text(), self.plotColorButton.currentColor)
+        else:
+            MainWindow.signals.cleanLineEditSignal.emit()
 
     def discardButtonClicked(self):
         MainWindow.signals.cleanLineEditSignal.emit()
@@ -130,9 +349,17 @@ class MainWindow(QMainWindow):
 
     def plotDeleted(self, index):
         self.plotsBill.pop(index-1)
+
         for i in range(len(self.plotsBill)):
             self.plotsBill[i] = PlotListContainer(str(i+1), self.plotsBill[i].name, self.plotsBill[i].color)
+
         self.redrawPlotList()
+
+    def minusScaleButtonClicked(self):
+        MainWindow.signals.scaleChanged.emit(False)
+
+    def plusScaleButtonClicked(self):
+        MainWindow.signals.scaleChanged.emit(True)
 
 class PlotListContainer(QWidget):
     def __init__(self, number, name, color):
@@ -142,57 +369,83 @@ class PlotListContainer(QWidget):
         self.name = name
         self.color = color
 
+        MainWindow.signals.plotColorChangedSignal.connect(self.colorChanged)
+
         self.numberLabel = QLabel()
         self.numberLabel.setText(number+").")
         self.numberLabel.setFont(TEXT_FONT)
+        self.numberLabel.setAlignment(Qt.AlignRight)
 
         self.plotName = QLabel()
-        self.plotName.setFont(TEXT_FONT)
+        self.plotName.setFont(QFont("Times New Roman", 16))
         self.plotName.setText(name)
+
+        self.plotName.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
 
         self.ifVisibleButton = QRadioButton()
         self.ifVisibleButton.setChecked(True)
         self.ifVisibleButton.clicked.connect(self.ifVisibleButtonClicked)
+        self.ifVisibleButton.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
-        self.colorButton  = QPushButton()
-        self.setButtonColor(color)
-        self.colorButton.clicked.connect(self.colorChoiceDialog)
+        self.colorButton  = PlotColorChoiceButton(color)
+        self.colorButton.clicked.connect(self.colorChoiceButtonClicked)
 
         self.deletePlotButton = QPushButton()
-        self.deletePlotButton.setIcon(QIcon("deleteButton.png"))
+        self.deletePlotButton.setMinimumSize(22, 22)
+        self.deletePlotButton.setMaximumSize(22, 22)
+        self.deletePlotButton.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.deletePlotButton.setIcon(QIcon("cross.png"))
         self.deletePlotButton.clicked.connect(self.deleteButtonClicked)
+
+        self.moreInfoButton = QPushButton()
+        self.moreInfoButton.setMinimumSize(22, 22)
+        self.moreInfoButton.setMaximumSize(22, 22)
+        self.moreInfoButton.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.moreInfoButton.setIcon(QIcon("plus.png"))
+        self.moreInfoButton.clicked.connect(self.moreInfoButtonClicked)
 
         self.layout = QGridLayout()
         self.setLayout(self.layout)
         self.layout.addWidget(self.numberLabel, 0, 0, 1, 1)
-        self.layout.addWidget(self.plotName, 0, 2, 1, 6)
-        self.layout.addWidget(self.ifVisibleButton, 0, 1, 1, 1)
-        self.layout.addWidget(self.colorButton, 0, 8, 1, 1)
-        self.layout.addWidget(self.deletePlotButton, 0, 9, 1, 1)
+        self.layout.addWidget(self.ifVisibleButton, 0, 2, 1, 1)
+        self.layout.addWidget(self.plotName, 0, 3, 1, 8)
+        self.layout.addWidget(self.colorButton, 0, 11, 1, 1)
+        self.layout.addWidget(self.deletePlotButton, 0, 12, 1, 1)
+        self.layout.addWidget(self.moreInfoButton, 0, 13, 1, 1)
+
+        self.plotName.setStyleSheet("text-align: left;color: #cccccc; ")
+        self.numberLabel.setStyleSheet("text-align: left;color: #cccccc;")
+        self.deletePlotButton.setStyleSheet(" border-style: solid; border-width: 1px; border-radius: 11px; background-color: #3c3f41;border-color: #3c3f41")
+        self.moreInfoButton.setStyleSheet(" border-style: solid; border-width: 1px; border-radius: 11px; background-color: #3c3f41; border-color: #3c3f41")
 
     def ifVisibleButtonClicked(self, isChecked):
         MainWindow.signals.plotVisibilityChangedSignal.emit((self.plotNumber, isChecked))
+
+    def colorChanged(self, args):
+        self.color = args[1]
 
     def setButtonColor(self, color):
         self.colorButton.setStyleSheet('''
             background-color: %s;
          ''' % color)
 
-    def colorChoiceDialog(self):
-        colorDialog = QColorDialog()
-        color = colorDialog.getColor()
-
-        if color.isValid():
-            self.currentColor = color.name()
-            MainWindow.signals.plotColorChangedSignal.emit((self.plotNumber, color.name()))
-            self.setButtonColor(color.name())
+    def colorChoiceButtonClicked(self):
+        MainWindow.signals.plotColorChangedSignal.emit((self.plotNumber, self.colorButton.currentColor))
 
     def deleteButtonClicked(self):
         MainWindow.signals.plotDeletedSignal.emit(self.plotNumber)
 
+    def moreInfoButtonClicked(self):
+        pass
+
 class PlotColorChoiceButton(QPushButton):
     def __init__(self, color = '#000000'):
         super().__init__()
+        self.setMinimumSize(22, 22)
+        self.setMaximumSize(22, 22)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
         self.setButtonColor(color)
 
@@ -203,6 +456,10 @@ class PlotColorChoiceButton(QPushButton):
     def setButtonColor(self, color):
         self.setStyleSheet('''
             background-color: %s;
+            border-radius: 11px;
+            border-style: solid;
+            border-color: white;
+            border-width: 1px;
          ''' %color)
 
     def colorChoiceDialog(self):
@@ -213,7 +470,7 @@ class PlotColorChoiceButton(QPushButton):
             self.currentColor = color.name()
             self.setButtonColor(color.name())
 
-class MenuBar(QMenuBar, MainWindow):
+class MenuBar(QMenuBar):
     def __init__(self):
         QMenuBar.__init__(self)
 
@@ -280,6 +537,7 @@ class MenuBar(QMenuBar, MainWindow):
         editMenu.addAction(pasteAction)
 
 class PlotCanvas(FigureCanvas):
+
     def __init__(self, parent):
         self.mainFigure = Figure(dpi=100)
 
@@ -287,9 +545,9 @@ class PlotCanvas(FigureCanvas):
         self.setParent(parent)
         FigureCanvas.updateGeometry(self)
 
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
         self.axes = None
+
+        self.scale = dc.Decimal("50.0")
 
         self.mainFigure.subplots_adjust(0, 0, 1, 1)
 
@@ -300,6 +558,7 @@ class PlotCanvas(FigureCanvas):
         MainWindow.signals.plotVisibilityChangedSignal.connect(self.changePlotsVisibility)
         MainWindow.signals.plotColorChangedSignal.connect(self.changePlorColor)
         MainWindow.signals.plotDeletedSignal.connect(self.deletePlot)
+        MainWindow.signals.scaleChanged.connect(self.scaleChanged)
 
         self.drawAxes()
 
@@ -312,19 +571,49 @@ class PlotCanvas(FigureCanvas):
         self.axes.spines["right"].set_visible("center")
         self.axes.spines["top"].set_visible("center")
 
-        plt.xticks(np.arange(-90, 90, 1))
-        plt.yticks(np.arange(-90, 90, 1))
+        scale = float(self.scale)
 
-        self.axes.axis([-100, 100, -100, 100])
+        if self.scale >= 1:
+            stringScale = str(int(self.scale))
 
+            if self.scale / 10**(len(stringScale)-1) == 1:
+                ticksInterval = float(dc.Decimal("10.0")**(len(stringScale)-2))
+            else:
+                ticksInterval = float(dc.Decimal("10.0")**(len(stringScale)-1))
+
+        else:
+            stringScale = str(self.scale)[2:]
+
+            if self.scale * 10 ** len(stringScale) == 1 :
+                ticksInterval = float(dc.Decimal("10.0") ** (-len(stringScale) - 1))
+            else:
+                ticksInterval = float(dc.Decimal("10.0") ** -len(stringScale))
+
+        self.axes.xaxis.set_major_locator(ticker.MultipleLocator(ticksInterval))
+        self.axes.xaxis.set_minor_locator(ticker.MultipleLocator(ticksInterval*5))
+        self.axes.yaxis.set_major_locator(ticker.MultipleLocator(ticksInterval))
+        self.axes.yaxis.set_minor_locator(ticker.MultipleLocator(ticksInterval*5))
+
+        self.axes.minorticks_on()
+
+        self.axes.axis([-scale, scale, -scale, scale])
+
+        interval = 2*scale/400
+
+        xArgs = np.arange(-scale, scale, interval)
         for i in range(len(self.axesPlots)):
             if self.axesPlots[i].isVisible:
-                xArgs = np.arange(-120., 120., 0.2)
-                yArgs = [(eval(self.axesPlots[i].formula.replace('x', str(k)))) for k in xArgs]
-
+                yArgs = [self.axesPlots[i].formula.subs(x, k) for k in xArgs]
                 plotColor = self.axesPlots[i].color
 
+                for i in range(len(yArgs)):
+                    if yArgs[i] > scale:
+                        yArgs[i] = scale+1
+                    elif yArgs[i] < -scale:
+                        yArgs[i] = -scale-1
+
                 self.axes.plot(xArgs, yArgs, 'k-', color = plotColor)
+
         self.draw()
 
     def addPlot(self, text, color):
@@ -335,33 +624,52 @@ class PlotCanvas(FigureCanvas):
             if i == ' ':
                 continue
             textWithoutSpaces += i
-        text = textWithoutSpaces
+        text = textWithoutSpaces.strip()
 
-        if text.strip() == '':
+        if text == '':
             MainWindow.signals.cleanLineEditSignal.emit()
             return()
 
         errorMessage = QErrorMessage(self)
 
+        for i in self.axesPlots:
+            if text == i.stringFormula:
+                errorMessage.setWindowTitle("Ошибка")
+                errorMessage.showMessage("Ошибка: Этот график уже существует.\nПовторите попытку.")
+                MainWindow.signals.cleanLineEditSignal.emit()
+                return()
+
+
         ifSymbolError = False
         editedLine = str()
+        # ifModuleOpened = False
+
         for i in range(len(text)):
-            if 'x+-*/.,()^:12345567890 '.find(text[i]) == -1:
+            if 'x+-*/.()^:12345567890 y=|'.find(text[i]) == -1:
                 ifSymbolError = True
-            if i > 0 and text[i - 1] == 'x' and text[i] == '(':
+            if i > 0 and (text[i - 1] == 'x' or text[i-1] == 'y') and text[i] == '(':
                 editedLine += '*' + '('
                 continue
             if i > 0 and text[i - 1] == ')' and text[i] == '(':
                 editedLine += '*' + '('
                 continue
-            if i > 0 and '1234567890)'.find(str(text[i - 1])) > 0 and text[i] == 'x':
-                editedLine += "*" + "(x)"
+            if i > 0 and '1234567890)'.find(str(text[i - 1])) > 0 and (text[i] == 'x' or text[i] == 'y'):
+                editedLine += "*" + "("+text[i]+")"
                 continue
             if text[i] == '^':
                 editedLine += '**'
                 continue
-            if text[i] == 'x':
-                editedLine += '(x)'
+            # if text[i] == '|':
+            #     if ifModuleOpened:
+            #         editedLine += ')'
+            #         ifModuleOpened = False
+            #         continue
+            #     editedLine+="abs("
+            #     ifModuleOpened = True
+            #     continue
+
+            if text[i]  == 'x' or text[i] == 'y':
+                editedLine += '('+text[i]+')'
                 continue
             editedLine += text[i]
 
@@ -370,6 +678,12 @@ class PlotCanvas(FigureCanvas):
             errorMessage.showMessage("Ошибка: введеный текст содержит недопустимые символы.\nПовторите попытку.")
             MainWindow.signals.cleanLineEditSignal.emit()
             return()
+
+        # if ifModuleOpened:
+        #     errorMessage.setWindowTitle("Ошибка")
+        #     errorMessage.showMessage("Ошибка: обнаружена незакрытый модуль.\nПовторите попытку.")
+        #     MainWindow.signals.cleanLineEditSignal.emit()
+        #     return ()
 
         for i in self.axesPlots:
             if i.formula == editedLine:
@@ -390,7 +704,6 @@ class PlotCanvas(FigureCanvas):
                 ifBracketError = True
                 break
 
-
         if bracketCounter != 0 or ifBracketError:
             errorMessage.setWindowTitle("Ошибка")
             errorMessage.showMessage("Ошибка: неправильная расстановка скобок.\nПовторите попытку.")
@@ -403,7 +716,8 @@ class PlotCanvas(FigureCanvas):
             MainWindow.signals.cleanLineEditSignal.emit()
             return()
 
-        axesEquation = AxesEquation(editedLine, color)
+        axesEquation = AxesEquation(editedLine, text, color)
+
         MainWindow.signals.plotAddedSignal.emit(axesEquation)
 
         self.axesPlots.append(axesEquation)
@@ -422,7 +736,41 @@ class PlotCanvas(FigureCanvas):
 
     def deletePlot(self, index):
         self.axesPlots.pop(index-1)
+        print(1)
+        self.drawAxes()
+
+    def scaleChanged(self, ifIncrease):
+        dc.getcontext().prec = 6
+        zoomCoof = dc.Decimal("0.0")
+
+        if self.scale >= 1:
+            stringScale = str(int(self.scale))
+
+            if self.scale / 10**(len(stringScale)-1) == 1 and not ifIncrease:
+                zoomCoof = dc.Decimal("10.0")**(len(stringScale)-2)
+            else:
+                zoomCoof = dc.Decimal("10.0")**(len(stringScale)-1)
+
+        else:
+            stringScale = str(self.scale)[2:]
+
+            if self.scale * 10 ** len(stringScale) == 1  and not ifIncrease:
+                zoomCoof = dc.Decimal("10.0") ** (-len(stringScale) - 1)
+            else:
+                zoomCoof = dc.Decimal("10.0") ** -len(stringScale)
+
+        if ifIncrease and self.scale < SCALE_MAX:
+            self.scale += zoomCoof
+
+        if  not ifIncrease and self.scale > SCALE_MIN:
+            self.scale -= zoomCoof
+
         self.drawAxes()
 
 mainWindow = MainWindow()
+startWindow = StartWindow()
+aboutProgrammeWindow = AboutProgrammeWindow()
+
+x, y = sp.symbols("x y")
+
 sys.exit(app.exec_())
